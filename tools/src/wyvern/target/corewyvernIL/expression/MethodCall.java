@@ -71,22 +71,24 @@ public class MethodCall extends Expression {
 		ValueType ot = objectExpr.typeCheck(ctx);
 		StructuralType st = ot.getStructuralType(ctx);
 		DeclType dt = st.findDecl(methodName, ctx);
-		if (dt == null)
+		if (dt == null) {
 			ToolError.reportError(ErrorMessage.NO_SUCH_METHOD, this, methodName);
-		if (!(dt instanceof DefDeclType))
+		}
+		if (!(dt instanceof DefDeclType)) {
 			ToolError.reportError(ErrorMessage.NOT_A_METHOD, this, methodName);
+		}
 		DefDeclType ddt = (DefDeclType)dt;
 		View v = View.from(objectExpr, ctx);
 		// check argument compatibility
 		for (int i = 0; i < args.size(); ++i) {
 			Expression e = args.get(i);
-			ValueType argType = ddt.getFormalArgs().get(i).getType().adapt(v);
+			ValueType formalArgType = ddt.getFormalArgs().get(i).getType().adapt(v);
 			String name = ddt.getFormalArgs().get(i).getName();
 			ValueType actualType = e.typeCheck(ctx); 
-			if (!actualType.isSubtypeOf(argType, ctx)) {
+			if (!actualType.isSubtypeOf(formalArgType, ctx)) {
 				// for debugging
-				actualType.isSubtypeOf(argType, ctx);
-				ToolError.reportError(ErrorMessage.ACTUAL_FORMAL_TYPE_MISMATCH, this, actualType.toString(), argType.toString());
+				actualType.isSubtypeOf(formalArgType, ctx);
+				ToolError.reportError(ErrorMessage.ACTUAL_FORMAL_TYPE_MISMATCH, this, actualType.toString(), formalArgType.toString());
             }
 			ctx = ctx.extend(name, actualType);
 			if (e instanceof Variable) {

@@ -1,5 +1,7 @@
 package wyvern.target.corewyvernIL.decltype;
 
+import java.io.IOException;
+
 import wyvern.target.corewyvernIL.EmitOIR;
 import wyvern.target.corewyvernIL.Environment;
 import wyvern.target.corewyvernIL.astvisitor.ASTVisitor;
@@ -38,5 +40,9 @@ public class AbstractTypeMember extends DeclType implements EmitOIR {
 	@Override
 	public DeclType doAvoid(String varName, TypeContext ctx, int count) {
 		return this;
+	}
+	
+	public void doPrettyPrint(Appendable dest, String indent) throws IOException {
+		dest.append(this.getName());
 	}
 }

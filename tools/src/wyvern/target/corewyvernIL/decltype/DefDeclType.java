@@ -150,8 +150,8 @@ public class DefDeclType extends DeclTypeWithResult {
       genericMapping returns a map from each generic arguments the position in the formals list where the argument is used as a type
       If the argument is used as the result type, then the position is len(formals), i.e. the position appended to the end of the list
       */
-    public  Map<Integer, Integer> genericMapping() {
-        Map<Integer, Integer> inferenceMap = new HashMap<Integer, Integer>();
+    public  Map<Integer, List<Integer>> genericMapping() {
+        Map<Integer, List<Integer>> inferenceMap = new HashMap<Integer, List<Integer>>();
         List<FormalArg> args = this.getFormalArgs();
         ValueType rawResultType = this.getRawResultType();
 
@@ -172,7 +172,7 @@ public class DefDeclType extends DeclTypeWithResult {
                 ValueType maybeGeneric = args.get(j).getType();
                 if(matchesGeneric(maybeGeneric, identifier)) {
                     // Then we can add this position to the inference map
-                    inferenceMap.put(i, j);
+                    append(inferenceMap, i, j);
                 }
             }
 
@@ -180,12 +180,27 @@ public class DefDeclType extends DeclTypeWithResult {
             if(matchesGeneric(rawResultType, identifier)) {
                 // Then we can add this position to the inference map
                 // Since it's the result type, we add it as a sentinel value as the length of the list (out of bounds)
-                inferenceMap.put(i, args.size());
+                append(inferenceMap, i, args.size());
             }
         }
         return inferenceMap;
     }
 
+    /**
+     * Appends the element provided to list of mapped values in the hashmap provided
+     * If the key isn't already in the map, then this function allocates the list and adds the element to it.
+     * Otherwise, the element is appended to the end of the list.
+     */
+    private static <K, E> void  append(Map<K, List<E>> map, K key, E elem) {
+    	if(map.get(key) == null) {
+    		List<E> singleton = new LinkedList<>();
+    		singleton.add(elem);
+    		map.put(key, singleton);
+    	} else {
+    		map.get(key).add(elem);
+    	}
+    }
+    
     /**
       @param maybeGeneric is the ValueType we're checking to see if it's a generic or not
       @param identifier is the identifier (usually a single letter) for the generic type

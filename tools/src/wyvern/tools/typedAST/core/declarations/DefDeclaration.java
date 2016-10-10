@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import wyvern.target.corewyvernIL.FormalArg;
 import wyvern.target.corewyvernIL.decltype.AbstractTypeMember;
+import wyvern.target.corewyvernIL.decltype.ConcreteTypeMember;
 import wyvern.target.corewyvernIL.decltype.DeclType;
 import wyvern.target.corewyvernIL.decltype.DefDeclType;
 import wyvern.target.corewyvernIL.expression.Expression;
@@ -396,8 +397,16 @@ public class DefDeclaration extends Declaration implements CoreAST, BoundCode, T
 
     public static StructuralType genericStructuralType(String genericName) {
         List<DeclType> bodyDecl = new LinkedList<>(); // these are the declarations internal to the struct
+        // bodyDecl.add(new ConcreteTypeMember("", new AbstractTypeMember(genericName)));
         bodyDecl.add(new AbstractTypeMember(genericName)); // the body contains only a abstract type member representing the generic type
 
+        StructuralType genType = new StructuralType(GENERIC_PREFIX + genericName, bodyDecl);
+        return genType;
+    }
+    
+    public static StructuralType genericConcreteStructuralType(String genericName, ValueType concreteType) {
+        List<DeclType> bodyDecl = new LinkedList<>(); // these are the declarations internal to the struct
+        bodyDecl.add(new ConcreteTypeMember(genericName, concreteType)); // the body contains only a abstract type member representing the generic type
         StructuralType genType = new StructuralType(GENERIC_PREFIX + genericName, bodyDecl);
         return genType;
     }

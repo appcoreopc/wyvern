@@ -15,11 +15,14 @@ import java.util.stream.Collectors;
 
 import wyvern.stdlib.Globals;
 import wyvern.target.corewyvernIL.FormalArg;
+import wyvern.target.corewyvernIL.decl.Declaration;
 import wyvern.target.corewyvernIL.decl.TypeDeclaration;
 import wyvern.target.corewyvernIL.decltype.AbstractTypeMember;
+import wyvern.target.corewyvernIL.decltype.ConcreteTypeMember;
 import wyvern.target.corewyvernIL.decltype.DefDeclType;
 import wyvern.target.corewyvernIL.expression.Expression;
 import wyvern.target.corewyvernIL.expression.MethodCall;
+import wyvern.target.corewyvernIL.expression.New;
 import wyvern.target.corewyvernIL.expression.Variable;
 import wyvern.target.corewyvernIL.support.CallableExprGenerator;
 import wyvern.target.corewyvernIL.support.GenContext;
@@ -75,20 +78,22 @@ public class Application extends CachingTypedAST implements CoreAST {
 		Type fnType = function.typecheck(env, Optional.empty());
 
 		Type argument = null;
-		if (fnType instanceof Arrow)
+		if (fnType instanceof Arrow) {
 			argument = ((Arrow) fnType).getArgument();
+		}
 		else if (fnType instanceof Intersection) {
 			List<Type> args = fnType.getChildren().values().stream()
 					.filter(tpe -> tpe instanceof Arrow).map(tpe->((Arrow)tpe).getArgument())
 					.collect(Collectors.toList());
 			argument = new Intersection(args);
 		}
-		if (this.argument != null)
+		if (this.argument != null) {
 			this.argument.typecheck(env, Optional.ofNullable(argument));
+		}
 		
-		if (!(fnType instanceof ApplyableType))
+		if (!(fnType instanceof ApplyableType)) {
 			reportError(TYPE_CANNOT_BE_APPLIED, this, fnType.toString());
-		
+		}
 		return ((ApplyableType)fnType).checkApplication(this, env);
 	}
 
@@ -207,7 +212,7 @@ public class Application extends CachingTypedAST implements CoreAST {
             // Then, try to infer the type of the remaining generics
 
             // Collect the mapping from generic args to provided args
-            Map<Integer, Integer> inferenceMap = ddt.genericMapping();
+            Map<Integer, List<Integer>> inferenceMap = ddt.genericMapping();
 
             for(int i = this.generics.size(); i < count; i++) {
                 
@@ -218,7 +223,8 @@ public class Application extends CachingTypedAST implements CoreAST {
                 }
 
                 // formal position tells you where in the formals the argument that uses the generic is
-                int formalPos = inferenceMap.get(i);
+                List<Integer> positions = inferenceMap.get(i);
+                int formalPos = positions.get(0);
                 // actual position tells you where in the actual argument list the type should be
                 int actualPos = formalPos - count;
                 if (this.argument instanceof TupleObject) {
@@ -240,11 +246,43 @@ public class Application extends CachingTypedAST implements CoreAST {
                         // Inferring from a formal arg that doesn't exist
                         // TODO unless we're inferring from the result type.....
                         // ToolError
+                    	throw new UnsupportedOperationException("Can't infer the result type yet.");
                     }
-                    args.add(argument.generateIL(ctx, formals.get(0).getType()));
+                    
+                    // Now we know that the argument is the inferrable type.
+                    ValueType inferredType = this.argument
+                    		.generateIL(ctx, null)
+                    		.getExprType();
+                    List<Declaration> members = new LinkedList<>();
+                    TypeDeclaration typeMember = new TypeDeclaration("self", inferredType, null);
+                    members.add(typeMember);
+                    Expression newExp = new New(members, "self", (ValueType) inferredType, null);
+                    args.add(newExp);
+                    // Build the structural type.
+                    // Set the type member to be the parameterized type.
+                    // ValueType inferredType = DefDeclaration.genericConcreteStructuralType(formals.get(0).getName(), formals.get(0).getType()));
+                    // ValueType inferredType = DefDeclaration.genericConcreteStructuralType(formals.get(0).getName(), (ValueType) this.argument.getType());
+                    // addInferredTypeArg(args, formals, 0, inferredType);
+                    
+                    // Make the List of declarations
+                    // Add to it the Type Declaration with the inferred type            
+                    // new ConcreteTypeMember(formals.get(0).getName(), formals.get(0).getType());
+                    // Expression newExp = new New(list, "self", inferredType, null);
+                    // args.add(argument.generateIL(ctx, formals.get(0).getType()));
                 }
             }
         }
+    }
+    
+    private void addInferredTypeArg(List<Expression> args, List<FormalArg> formals, int index, ValueType inferredType) {
+    	// Make the List of declarations
+        // Add to it the Type Declaration with the inferred type
+        List<Declaration> members = new LinkedList<>();
+        TypeDeclaration typeMember = new TypeDeclaration("selffff", inferredType, null);
+        members.add(typeMember);
+        // members.add(inferredType);
+        Expression newExp = new New(members, "self", inferredType, null);
+        args.add(newExp);
     }
     
     private void generateILForTuples(List<FormalArg> formals, List<Expression> args, GenContext ctx) {
@@ -277,7 +315,7 @@ public class Application extends CachingTypedAST implements CoreAST {
         	// leave args empty
         } else {
             // then there is only one argument, since len(actuals) is neither 0 nor > 1
-            if (formals.size() != 1 + this.generics.size()) {
+            if (formals.size() != 1 + args.size()) {
     			ToolError.reportError(ErrorMessage.WRONG_NUMBER_OF_ARGUMENTS, this, ""+formals.size());
             }
         	
