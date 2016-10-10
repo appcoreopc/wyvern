@@ -19,6 +19,7 @@ import wyvern.target.corewyvernIL.decl.Declaration;
 import wyvern.target.corewyvernIL.decl.TypeDeclaration;
 import wyvern.target.corewyvernIL.decltype.AbstractTypeMember;
 import wyvern.target.corewyvernIL.decltype.ConcreteTypeMember;
+import wyvern.target.corewyvernIL.decltype.DeclType;
 import wyvern.target.corewyvernIL.decltype.DefDeclType;
 import wyvern.target.corewyvernIL.expression.Expression;
 import wyvern.target.corewyvernIL.expression.MethodCall;
@@ -28,6 +29,7 @@ import wyvern.target.corewyvernIL.support.CallableExprGenerator;
 import wyvern.target.corewyvernIL.support.GenContext;
 import wyvern.target.corewyvernIL.support.TypeGenContext;
 import wyvern.target.corewyvernIL.type.NominalType;
+import wyvern.target.corewyvernIL.type.StructuralType;
 import wyvern.target.corewyvernIL.type.ValueType;
 import wyvern.tools.errors.ErrorMessage;
 import wyvern.tools.errors.FileLocation;
@@ -250,13 +252,16 @@ public class Application extends CachingTypedAST implements CoreAST {
                     }
                     
                     // Now we know that the argument is the inferrable type.
-                    ValueType inferredType = this.argument
-                    		.generateIL(ctx, null)
-                    		.getExprType();
+                    final Expression argIL = this.argument
+                    		.generateIL(ctx, null);
+					ValueType inferredType = argIL.typeCheck(ctx);
                     List<Declaration> members = new LinkedList<>();
-                    TypeDeclaration typeMember = new TypeDeclaration("self", inferredType, null);
+                    TypeDeclaration typeMember = new TypeDeclaration(formals.get(0).getName().substring(DefDeclaration.GENERIC_PREFIX.length()), inferredType, null);
                     members.add(typeMember);
-                    Expression newExp = new New(members, "self", (ValueType) inferredType, null);
+                    List<DeclType> declTypes = new LinkedList<DeclType>();
+                    declTypes.add(new ConcreteTypeMember(formals.get(0).getName().substring(DefDeclaration.GENERIC_PREFIX.length()), inferredType));
+					ValueType actualArgType = new StructuralType("self", declTypes);
+                    Expression newExp = new New(members, "self", actualArgType, null);
                     args.add(newExp);
                     // Build the structural type.
                     // Set the type member to be the parameterized type.
